@@ -9,7 +9,7 @@ export class BondingCurveAccount {
   public realSolReserves: bigint;
   public tokenTotalSupply: bigint;
   public complete: boolean;
-  public creatorVault: PublicKey;
+  public creator: PublicKey;
 
   constructor(
     discriminator: bigint,
@@ -19,7 +19,7 @@ export class BondingCurveAccount {
     realSolReserves: bigint,
     tokenTotalSupply: bigint,
     complete: boolean,
-    creatorVault: PublicKey
+    creator: PublicKey
   ) {
     this.discriminator = discriminator;
     this.virtualTokenReserves = virtualTokenReserves;
@@ -28,7 +28,7 @@ export class BondingCurveAccount {
     this.realSolReserves = realSolReserves;
     this.tokenTotalSupply = tokenTotalSupply;
     this.complete = complete;
-    this.creatorVault = creatorVault;
+    this.creator = creator;
   }
 
   getBuyPrice(amount: bigint): bigint {
@@ -122,7 +122,7 @@ export class BondingCurveAccount {
       u64("realSolReserves"),
       u64("tokenTotalSupply"),
       bool("complete"),
-      publicKey("creatorVault"),
+      publicKey("creator"),
     ]);
 
     let value = structure.decode(buffer);
@@ -134,7 +134,7 @@ export class BondingCurveAccount {
       BigInt(value.realSolReserves),
       BigInt(value.tokenTotalSupply),
       value.complete,
-      value.creatorVault
+      value.creator
     );
   }
 }

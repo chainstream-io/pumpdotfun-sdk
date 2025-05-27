@@ -23,16 +23,11 @@ export const calculateWithSlippageBuy = (
   return amount + (amount * basisPoints) / 10000n;
 };
 
-export function calculateWithSlippageSell (
+export const calculateWithSlippageSell = (
   amount: bigint,
-  slippageBasisPoints: bigint = 500n,
-): bigint {
-  // Actually use the slippage basis points for calculation
-  const reduction = Math.max(
-    1,
-    Number((amount * slippageBasisPoints) / 10000n)
-  );
-  return amount - BigInt(reduction);
+  basisPoints: bigint = 500n,
+) => {
+  return amount - (amount * basisPoints) / 10000n;
 }
 
 export async function sendTx(
@@ -42,33 +37,29 @@ export async function sendTx(
   signers: Keypair[],
   priorityFees?: PriorityFee,
   commitment: Commitment = DEFAULT_COMMITMENT,
-  finality: Finality = DEFAULT_FINALITY
+  finality: Finality = DEFAULT_FINALITY,
+  skipPreflight: boolean = false,
+  blockhash?: string
 ): Promise<TransactionResult> {
   let newTx = new Transaction();
-
   if (priorityFees) {
     const modifyComputeUnits = ComputeBudgetProgram.setComputeUnitLimit({
       units: priorityFees.unitLimit,
     });
-
     const addPriorityFee = ComputeBudgetProgram.setComputeUnitPrice({
       microLamports: priorityFees.unitPrice,
     });
     newTx.add(modifyComputeUnits);
     newTx.add(addPriorityFee);
   }
-
   newTx.add(tx);
-
-  let versionedTx = await buildVersionedTx(connection, payer, newTx, commitment);
+  let versionedTx = await buildVersionedTx(connection, payer, newTx, commitment, blockhash);
   versionedTx.sign(signers);
-
   try {
     const sig = await connection.sendTransaction(versionedTx, {
-      skipPreflight: false,
+      skipPreflight,
     });
-    console.log("sig:", `https://solscan.io/tx/${sig}`);
-
+    console.log("Pumpfun | sig:", `https://solscan.io/tx/${sig}`);
     let txResult = await getTxDetails(connection, sig, commitment, finality);
     if (!txResult) {
       return {
@@ -81,11 +72,13 @@ export async function sendTx(
       signature: sig,
       results: txResult,
     };
-  } catch (e) {
+  }
+  catch (e) {
     if (e instanceof SendTransactionError) {
-      let ste = e as SendTransactionError;
+      let ste = e;
       console.log("SendTransactionError" + await ste.getLogs(connection));
-    } else {
+    }
+    else {
       console.error(e);
     }
     return {
@@ -99,17 +92,18 @@ export const buildVersionedTx = async (
   connection: Connection,
   payer: PublicKey,
   tx: Transaction,
-  commitment: Commitment = DEFAULT_COMMITMENT
+  commitment: Commitment = DEFAULT_COMMITMENT,
+  blockHash?: string
 ): Promise<VersionedTransaction> => {
-  const blockHash = (await connection.getLatestBlockhash(commitment))
-    .blockhash;
-
+  if (!blockHash) {
+    blockHash = (await connection.getLatestBlockhash(commitment))
+      .blockhash;
+  }
   let messageV0 = new TransactionMessage({
     payerKey: payer,
     recentBlockhash: blockHash,
     instructions: tx.instructions,
   }).compileToV0Message();
-
   return new VersionedTransaction(messageV0);
 };
 
