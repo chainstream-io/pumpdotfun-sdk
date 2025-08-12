@@ -1,0 +1,15 @@
+on: push
+name: Lark CI/CD Notification
+jobs:
+  larkNotification:
+    name: Lark CI/CD Notification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Lark Notification
+        uses: drayeasy/action-lark-notify@main
+        env:
+          LARK_WEBHOOK: ${{ secrets.CS_DEVOPS_CICD_WEBHOOK }}
+          LARK_SECRET: ${{ secrets.CS_DEVOPS_CICD_SIGNKEY }}
+          LARK_MESSAGE_TITLE: 'New Commit Notification'
